@@ -104,8 +104,8 @@ var p = EventDispatcher.prototype;
 
 // public methods:
 	/**
-	 * Adds the specified event listener. Note that adding multiple listeners to the same function will result in
-	 * multiple callbacks getting fired.
+	 * Adds the specified event listener for one or more events. Note that adding multiple listeners to the same
+	 * function will result in multiple callbacks getting fired.
 	 *
 	 * <h4>Example</h4>
 	 *
@@ -114,24 +114,31 @@ var p = EventDispatcher.prototype;
 	 *         // Click happened.
 	 *      }
 	 *
+	 *      displayObject.addEventListener("click mouseup", handleClickOrMouseUp);
+	 *      function handleClickOrMouseUp(event) {
+	 *          // Click or mouseup happened.
+	 *      }
+	 *
 	 * @method addEventListener
-	 * @param {String} type The string type of the event.
+	 * @param {String} types One or more space-separated event types.
 	 * @param {Function | Object} listener An object with a handleEvent method, or a function that will be called when
-	 * the event is dispatched.
+	 * the event(s) are dispatched.
 	 * @return {Function | Object} Returns the listener for chaining or assignment.
 	 **/
-	p.addEventListener = function(type, listener) {
-		var listeners = this._listeners;
+	p.addEventListener = function(types, listener) {
+		var typesArr = types.split(" "), listeners = this._listeners;
 		if (!listeners) { listeners = this._listeners = {}; }
-		else { this.removeEventListener(type, listener); }
-		var arr = listeners[type];
-		if (!arr) { arr = listeners[type] = []; }
-		arr.push(listener);
+		else { this.removeEventListener(types, listener); }
+		for (var i=0,l=typesArr.length; i<l; i++) {
+			var type = typesArr[i], arr = listeners[type];
+			if (!arr) { arr = listeners[type] = []; }
+			arr.push(listener);
+		}
 		return listener;
 	};
 
 	/**
-	 * Removes the specified event listener.
+	 * Removes the specified event listener for one or more events.
 	 *
 	 * <b>Important Note:</b> that you must pass the exact function reference used when the event was added. If a proxy
 	 * function, or function closure is used as the callback, the proxy/closure reference must be used - a new proxy or
@@ -140,27 +147,32 @@ var p = EventDispatcher.prototype;
 	 * <h4>Example</h4>
 	 *
 	 *      displayObject.removeEventListener("click", handleClick);
+	 *      displayObject.removeEventListener("click mouseup", handleClickOrMouseUp);
 	 *
 	 * @method removeEventListener
-	 * @param {String} type The string type of the event.
+	 * @param {String} types One or more space-separated event types.
 	 * @param {Function | Object} listener The listener function or object.
 	 **/
-	p.removeEventListener = function(type, listener) {
+	p.removeEventListener = function(types, listener) {
+		types = types.split(" ");
 		var listeners = this._listeners;
 		if (!listeners) { return; }
-		var arr = listeners[type];
-		if (!arr) { return; }
-		for (var i=0,l=arr.length; i<l; i++) {
-			if (arr[i] == listener) {
-				if (l==1) { delete(listeners[type]); } // allows for faster checks.
-				else { arr.splice(i,1); }
-				break;
+		for (var i=0,l=types.length; i<l; i++) {
+			var type = types[i];
+			var arr = listeners[type];
+			if (!arr) { continue; }
+			for (var j=0,len=arr.length; j<len; j++) {
+				if (arr[j] == listener) {
+					if (len==1) { delete(listeners[type]); } // allows for faster checks.
+					else { arr.splice(j,1); }
+					break;
+				}
 			}
 		}
 	};
 
 	/**
-	 * Removes all listeners for the specified type, or all listeners of all types.
+	 * Removes all listeners for the specified type or types, or all listeners of all types.
 	 *
 	 * <h4>Example</h4>
 	 *
@@ -170,12 +182,20 @@ var p = EventDispatcher.prototype;
 	 *      // Remove all click listeners
 	 *      displayObject.removeAllEventListeners("click");
 	 *
+	 *      // Remove all click and mouseup listeners
+	 *      displayObject.removeAllEventListeners("click mouseup");
+	 *
 	 * @method removeAllEventListeners
-	 * @param {String} [type] The string type of the event. If omitted, all listeners for all types will be removed.
+	 * @param {String} [types] One or more space-separated event types. If omitted, all listeners for all types will be
+	 * removed.
 	 **/
-	p.removeAllEventListeners = function(type) {
-		if (!type) { this._listeners = null; }
-		else if (this._listeners) { delete(this._listeners[type]); }
+	p.removeAllEventListeners = function(types) {
+		var type, i = 0;
+		if (!types) { this._listeners = null; }
+		else if (this._listeners) {
+			types = types.split(" ");
+			for (var i=0,l=types.length; i<l; i++) { delete(this._listeners[types[i]]); }
+		}
 	};
 
 	/**
